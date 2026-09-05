@@ -51,6 +51,21 @@ docker run --rm -p 8080:8080 evostel-managed-services
 
 Open `http://localhost:8080`.
 
+## Fly.io (recommended host)
+
+`fly.toml` runs the repository `Dockerfile` as a single always-on instance in `fra`,
+which keeps the in-memory store and the Data Protection key ring stable between
+requests — the two things autoscaling functions break.
+
+```bash
+flyctl apps create eds-managed-services --org personal
+flyctl deploy --remote-only
+```
+
+`force_https` and `auto_stop_machines = 'off'` are already set. The app listens on
+8080 inside the container; Fly terminates TLS and forwards `X-Forwarded-Proto`, which
+the app honours.
+
 ## Vercel
 
 Vercel has no .NET runtime, so the app deploys as a container image. `Dockerfile.vercel`

@@ -1,0 +1,23 @@
+# Fly.io runs the container from the repository Dockerfile as a single
+# always-on instance, which keeps the in-memory store and the Data Protection
+# key ring stable between requests.
+app = 'eds-managed-services'
+primary_region = 'fra'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  ASPNETCORE_ENVIRONMENT = 'Production'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = 'off'
+  min_machines_running = 1
+  processes = ['app']
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'
