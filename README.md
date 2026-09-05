@@ -51,6 +51,24 @@ docker run --rm -p 8080:8080 evostel-managed-services
 
 Open `http://localhost:8080`.
 
+## Vercel
+
+Vercel has no .NET runtime, so the app deploys as a container image. `Dockerfile.vercel`
+at the project root is detected automatically during the build; Vercel builds it, pushes
+it to the Vercel Container Registry, and routes all traffic to the HTTP server it starts
+on port 80. No `vercel.json` is required. Container Images must be enabled for the team.
+
+Two consequences of running on autoscaling functions:
+
+- The `ManagedServicesStore` is per-instance and in-memory, so tickets, acknowledgements,
+  and integration-check results are lost when an instance scales down (5 minutes idle in
+  production) and are not shared between instances.
+- Data Protection keys are generated per instance, so an antiforgery token issued by one
+  instance is rejected by another. Persist the key ring to shared storage before relying
+  on the state-changing endpoints under load.
+
+Neither affects the live Commercial API health probe, which is stateless.
+
 ## Configuration
 
 Configuration is under the `Evostel` section in `appsettings.json`:

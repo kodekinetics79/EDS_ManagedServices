@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Evostel.ManagedServices.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,8 +11,16 @@ builder.Services.AddHttpClient<CommercialApiProbeService>(client =>
     client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 });
 builder.Services.AddSingleton<ManagedServicesStore>();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
