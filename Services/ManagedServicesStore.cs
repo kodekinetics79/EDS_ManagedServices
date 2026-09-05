@@ -2,7 +2,9 @@ using Evostel.ManagedServices.Web.Models;
 
 namespace Evostel.ManagedServices.Web.Services;
 
-public sealed class ManagedServicesStore
+// Representative data source. Serves the built-in dataset so the dashboard is fully
+// operable before the Evostel operations API exists.
+public sealed class ManagedServicesStore : IManagedServicesData
 {
     private readonly object _gate = new();
     private int _nextTicket = 3322;
@@ -74,11 +76,11 @@ public sealed class ManagedServicesStore
         new() { Control = "Quarterly compliance audit", Framework = "Post-launch support", Owner = "Compliance Owner", Status = "scheduled", Reviewed = "15 Sep 2026" }
     ];
 
-    public DashboardViewModel Snapshot(string activePage)
+    public Task<DashboardViewModel> SnapshotAsync(string activePage, CancellationToken cancellationToken)
     {
         lock (_gate)
         {
-            return new()
+            return Task.FromResult<DashboardViewModel>(new()
             {
                 ActivePage = activePage,
                 Services = _services.Select(Clone).ToList(),
@@ -88,28 +90,28 @@ public sealed class ManagedServicesStore
                 Activities = _activities.ToList(),
                 Reports = ReportRows.ToList(),
                 Compliance = ComplianceRows.ToList()
-            };
+            });
         }
     }
 
-    public int OpenIncidentCount
+    public Task<int> OpenIncidentCountAsync(CancellationToken cancellationToken)
     {
-        get { lock (_gate) return _incidents.Count(incident => incident.Status != "resolved"); }
+        lock (_gate) return Task.FromResult(_incidents.Count(incident => incident.Status != "resolved"));
     }
 
-    public Incident? Acknowledge(string incidentId)
+    public Task<Incident?> AcknowledgeAsync(string incidentId, CancellationToken cancellationToken)
     {
         lock (_gate)
         {
             var incident = _incidents.FirstOrDefault(row => row.Id.Equals(incidentId, StringComparison.OrdinalIgnoreCase));
-            if (incident is null) return null;
+            if (incident is null) return Task.FromResult<Incident?>(null);
             incident.Status = "acknowledged";
             _activities.Insert(0, new() { Time = DateTime.Now.ToString("HH:mm"), Title = $"Incident {incident.Id} acknowledged", Detail = $"Owner: {incident.Owner}", Tone = "success" });
-            return Clone(incident);
+            return Task.FromResult<Incident?>(Clone(incident));
         }
     }
 
-    public SupportTicket CreateTicket(CreateTicketRequest request)
+    public Task<SupportTicket> CreateTicketAsync(CreateTicketRequest request, CancellationToken cancellationToken)
     {
         lock (_gate)
         {
@@ -120,19 +122,19 @@ public sealed class ManagedServicesStore
             };
             _tickets.Insert(0, ticket);
             _activities.Insert(0, new() { Time = DateTime.Now.ToString("HH:mm"), Title = "New support ticket", Detail = $"{ticket.Id} — {ticket.Subject}", Tone = "info" });
-            return ticket;
+            return Task.FromResult(ticket);
         }
     }
 
-    public IntegrationRun? CompleteIntegrationCheck(string integrationId)
+    public Task<IntegrationRun?> CompleteIntegrationCheckAsync(string integrationId, CancellationToken cancellationToken)
     {
         lock (_gate)
         {
             var integration = _integrations.FirstOrDefault(row => row.Id.Equals(integrationId, StringComparison.OrdinalIgnoreCase));
-            if (integration is null) return null;
+            if (integration is null) return Task.FromResult<IntegrationRun?>(null);
             integration.Result = "success";
             integration.LastRun = $"{DateTime.Now:HH:mm} AST";
-            return Clone(integration);
+            return Task.FromResult<IntegrationRun?>(Clone(integration));
         }
     }
 

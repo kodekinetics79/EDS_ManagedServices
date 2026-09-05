@@ -16,7 +16,20 @@ builder.Services.AddHttpClient<CommercialApiProbeService>(client =>
     client.Timeout = TimeSpan.FromSeconds(15);
     client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 });
+// Evostel:OperationsMode selects the data source behind IManagedServicesData.
+// "Representative" serves the built-in dataset. A live implementation calling the
+// Evostel operations API registers here instead — see docs/OPERATIONS-API-CONTRACT.md.
+var operationsMode = builder.Configuration["Evostel:OperationsMode"] ?? "Representative";
+if (!string.Equals(operationsMode, "Representative", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException(
+        $"Evostel:OperationsMode is '{operationsMode}' but no live data source is registered. " +
+        "Implement IManagedServicesData against the Evostel operations API and register it here, " +
+        "or set the mode back to 'Representative'.");
+}
+
 builder.Services.AddSingleton<ManagedServicesStore>();
+builder.Services.AddSingleton<IManagedServicesData>(sp => sp.GetRequiredService<ManagedServicesStore>());
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;

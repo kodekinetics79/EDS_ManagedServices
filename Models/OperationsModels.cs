@@ -93,6 +93,13 @@ public sealed class DashboardViewModel
     public required IReadOnlyList<ActivityItem> Activities { get; init; }
     public required IReadOnlyList<ReportItem> Reports { get; init; }
     public required IReadOnlyList<ComplianceItem> Compliance { get; init; }
+
+    public static DashboardViewModel Empty(string activePage) => new()
+    {
+        ActivePage = activePage,
+        Services = [], Incidents = [], Tickets = [], Integrations = [],
+        Activities = [], Reports = [], Compliance = []
+    };
 }
 
 public sealed class IncidentTableViewModel

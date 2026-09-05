@@ -1,57 +1,68 @@
+using Evostel.ManagedServices.Web.Models;
 using Evostel.ManagedServices.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Evostel.ManagedServices.Web.Controllers;
 
-public sealed class HomeController(ManagedServicesStore store) : Controller
+public sealed class HomeController(IManagedServicesData data) : Controller
 {
     [HttpGet("/")]
-    public IActionResult Overview() => Dashboard("overview");
+    public Task<IActionResult> Overview(CancellationToken cancellationToken) => Dashboard("overview", cancellationToken);
 
     [HttpGet("/services")]
-    public IActionResult Services() => Dashboard("services");
+    public Task<IActionResult> Services(CancellationToken cancellationToken) => Dashboard("services", cancellationToken);
 
     [HttpGet("/integrations")]
-    public IActionResult Integrations() => Dashboard("integrations");
+    public Task<IActionResult> Integrations(CancellationToken cancellationToken) => Dashboard("integrations", cancellationToken);
 
     [HttpGet("/incidents")]
-    public IActionResult Incidents() => Dashboard("incidents");
+    public Task<IActionResult> Incidents(CancellationToken cancellationToken) => Dashboard("incidents", cancellationToken);
 
     [HttpGet("/support")]
-    public IActionResult Support() => Dashboard("support");
+    public Task<IActionResult> Support(CancellationToken cancellationToken) => Dashboard("support", cancellationToken);
 
     [HttpGet("/reports")]
-    public IActionResult Reports() => Dashboard("reports");
+    public Task<IActionResult> Reports(CancellationToken cancellationToken) => Dashboard("reports", cancellationToken);
 
     [HttpGet("/compliance")]
-    public IActionResult Compliance() => Dashboard("compliance");
+    public Task<IActionResult> Compliance(CancellationToken cancellationToken) => Dashboard("compliance", cancellationToken);
 
     [HttpGet("/settings")]
-    public IActionResult Settings() => Dashboard("settings");
+    public Task<IActionResult> Settings(CancellationToken cancellationToken) => Dashboard("settings", cancellationToken);
 
     [HttpGet("/activity")]
-    public IActionResult Activity() => Dashboard("activity");
+    public Task<IActionResult> Activity(CancellationToken cancellationToken) => Dashboard("activity", cancellationToken);
 
     [HttpGet("/forbidden")]
-    public IActionResult ForbiddenPage()
+    public Task<IActionResult> ForbiddenPage(CancellationToken cancellationToken)
     {
         Response.StatusCode = StatusCodes.Status403Forbidden;
-        return Dashboard("forbidden");
+        return Dashboard("forbidden", cancellationToken);
     }
 
+    // UseExceptionHandler routes here, so this action must not depend on the data
+    // source succeeding. A live source that is failing is exactly why we arrived.
     [HttpGet("/error")]
-    public IActionResult Error()
+    public async Task<IActionResult> Error(CancellationToken cancellationToken)
     {
         Response.StatusCode = StatusCodes.Status500InternalServerError;
-        return Dashboard("error");
+        try
+        {
+            return await Dashboard("error", cancellationToken);
+        }
+        catch (Exception)
+        {
+            return View("Dashboard", DashboardViewModel.Empty("error"));
+        }
     }
 
     [HttpGet("/{*path}", Order = 999)]
-    public IActionResult NotFoundPage()
+    public Task<IActionResult> NotFoundPage(CancellationToken cancellationToken)
     {
         Response.StatusCode = StatusCodes.Status404NotFound;
-        return Dashboard("not-found");
+        return Dashboard("not-found", cancellationToken);
     }
 
-    private ViewResult Dashboard(string page) => View("Dashboard", store.Snapshot(page));
+    private async Task<IActionResult> Dashboard(string page, CancellationToken cancellationToken) =>
+        View("Dashboard", await data.SnapshotAsync(page, cancellationToken));
 }
