@@ -1,0 +1,62 @@
+@model DashboardViewModel
+@{
+    var titles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["overview"] = "Managed Services", ["services"] = "Service Health",
+        ["integrations"] = "Integrations", ["incidents"] = "Incidents",
+        ["support"] = "Support", ["reports"] = "Reports", ["compliance"] = "Compliance",
+        ["settings"] = "Settings", ["activity"] = "Activity", ["forbidden"] = "Access Restricted",
+        ["not-found"] = "Page Not Found", ["error"] = "Service Error"
+    };
+    var pageTitle = titles.GetValueOrDefault(Model.ActivePage, "Managed Services");
+    string Active(string page) => Model.ActivePage == page ? "active" : string.Empty;
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Evostel managed services operations dashboard" />
+    <title>@pageTitle — Evostel Managed Services</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body data-page="@Model.ActivePage">
+    <a class="skip-link" href="#main-content">Skip to dashboard content</a>
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar" aria-label="Application navigation">
+            <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>EVOSTEL</strong><small>Managed Services</small></span></div>
+            <nav class="main-nav" aria-label="Primary">
+                <a class="@Active("overview")" href="/"><span aria-hidden="true">⌂</span>Overview</a>
+                <a class="@Active("services")" href="/services"><span aria-hidden="true">◉</span>Service health</a>
+                <a class="@Active("integrations")" href="/integrations"><span aria-hidden="true">⇄</span>Integrations</a>
+                <a class="@Active("incidents")" href="/incidents"><span aria-hidden="true">!</span>Incidents</a>
+                <a class="@Active("support")" href="/support"><span aria-hidden="true">?</span>Support</a>
+                <a class="@Active("reports")" href="/reports"><span aria-hidden="true">▥</span>Reports</a>
+                <a class="@Active("compliance")" href="/compliance"><span aria-hidden="true">✓</span>Compliance</a>
+                <a class="@Active("settings")" href="/settings"><span aria-hidden="true">⚙</span>Settings</a>
+            </nav>
+            <div class="sidebar-footer"><span>People</span><span>Technology</span><span>Progress</span><i></i><small>In partnership with</small><strong>KK <em>Kode Kinetics</em></strong></div>
+        </aside>
+        <div class="workspace">
+            <header class="topbar">
+                <div class="topbar-title">
+                    <button class="icon-button mobile-menu" type="button" id="menu-toggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+                    <div><h1>@pageTitle</h1><p>Operate · Support · Optimise together</p></div>
+                </div>
+                <div class="topbar-actions">
+                    <label class="environment"><span class="sr-only">Environment</span><select id="environment"><option>UAT</option><option>Production</option></select></label>
+                    <div class="last-refresh"><span>Last checked</span><strong id="last-checked">Checking…</strong></div>
+                    <button class="button button-outline" type="button" id="refresh-health" aria-label="Refresh service health"><span aria-hidden="true">↻</span><span>Refresh</span></button>
+                    <a class="icon-button notification" href="/activity" aria-label="Notifications, 3 unread">♢<b>3</b></a>
+                    <div class="user-chip" aria-label="Signed in as Operations Lead"><span>OL</span><div><strong>Operations Lead</strong><small>Evostel</small></div></div>
+                </div>
+            </header>
+            <main id="main-content">@RenderBody()</main>
+        </div>
+    </div>
+    <form id="anti-forgery" hidden>@Html.AntiForgeryToken()</form>
+    <div class="toast-viewport" id="toast-viewport" aria-live="polite" aria-label="Notifications"></div>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,74 @@
+@model DashboardViewModel
+@{
+    var isOverview = Model.ActivePage == "overview";
+    var openIncidents = Model.Incidents.Count(incident => incident.Status != "resolved");
+}
+
+@if (isOverview)
+{
+    <div class="dashboard-grid">
+        <div class="dashboard-main">
+            <section class="data-boundary" role="note"><strong>Connection boundary:</strong> Commercial API health is probed live. Incidents, SLA, integrations, reports, and compliance remain representative until protected monitoring adapters are configured.</section>
+            <section class="system-banner" id="platform-banner"><span class="banner-icon" aria-hidden="true">✓</span><div><strong id="platform-title">Checking platform health</strong><span id="health-message">Contacting the live Commercial API. Other configured services show no active critical incident.</span></div><a href="/services">View service health →</a></section>
+            <section class="metrics" aria-label="Operational summary">
+                <article><span>Availability</span><strong>99.94%</strong><small class="positive">↑ 0.02% vs. last week</small></article>
+                <article><span>API success rate</span><strong>99.72%</strong><small class="negative">↓ 0.18% vs. last week</small></article>
+                <article><span>Open incidents</span><strong>@openIncidents</strong><small class="positive">↓ 4 vs. last week</small></article>
+                <article><span>SLA compliance</span><strong>96.8%</strong><small class="positive">↑ 1.1% vs. last week</small></article>
+            </section>
+            @await Html.PartialAsync("_ServiceRail", Model.Services)
+            @await Html.PartialAsync("_IncidentTable", new IncidentTableViewModel { Incidents = Model.Incidents.Take(5).ToList(), Embedded = true })
+            <section class="bottom-grid">
+                <article class="panel support-summary"><div class="section-heading"><div><h2>Support escalation queue</h2><p>@Model.Tickets.Count open requests</p></div><a href="/support">View all</a></div><div class="tier-grid">
+                    @foreach (var level in new[] { "L1", "L2", "L3" })
+                    {
+                        var rows = Model.Tickets.Where(row => row.Level == level).ToList();
+                        <div class="tier"><strong>@level — @(level == "L1" ? "Service Desk" : level == "L2" ? "Business / IT" : "Engineering")</strong><span><b>@rows.Count</b> open</span><small>@(rows.Count(row => row.IsNew)) new · @(rows.Count(row => row.IsAging)) aging</small></div>
+                    }
+                </div></article>
+                <article class="panel weekly-report"><div class="report-icon" aria-hidden="true">⇩</div><div><h2>Weekly performance report</h2><p>Platform performance, incident trends, and SLA compliance</p><strong>28 Aug – 3 Sep 2026</strong><ul><li>Availability: 99.94%</li><li>API success: 99.72%</li><li>Incidents: 7</li><li>SLA compliance: 96.8%</li></ul></div><a class="button button-outline" href="/reports/weekly.txt">Download report</a></article>
+            </section>
+        </div>
+        @await Html.PartialAsync("_ActivityFeed", Model.Activities)
+    </div>
+}
+else if (Model.ActivePage == "services")
+{
+    <div class="page-stack"><header class="page-intro"><div><h2>End-to-end service health</h2><p>Availability, latency, ownership, and monitoring source across the Evostel commerce chain.</p></div><button class="button button-primary" type="button" id="page-refresh">Run health check</button></header><section class="data-boundary" role="note">The Commercial API is checked live. Other service readings remain representative until protected monitoring adapters are connected.</section>@await Html.PartialAsync("_ServiceRail", Model.Services)<section class="panel table-panel"><div class="section-heading"><div><h2>Service details</h2><p>Operational ownership and evidence source</p></div></div><div class="table-wrap"><table><thead><tr><th>Service</th><th>Status</th><th>Latency</th><th>Availability</th><th>Owner</th><th>Source</th></tr></thead><tbody>@foreach (var service in Model.Services){<tr data-service-row="@service.Id"><td><strong>@service.Name</strong></td><td><span class="status status-@service.Status">@service.Status</span></td><td data-latency>@service.Latency ms</td><td>@service.Availability%</td><td>@service.Owner</td><td>@service.Source</td></tr>}</tbody></table></div></section></div>
+}
+else if (Model.ActivePage == "integrations")
+{
+    <div class="page-stack"><header class="page-intro"><div><h2>Integration operations</h2><p>D365 F&O, payment, notification, and commerce synchronization checkpoints.</p></div></header><section class="data-boundary" role="note">Run-check results are representative until authenticated D365 and monitoring adapters are configured.</section><section class="panel table-panel"><div class="section-heading"><div><h2>Integration run status</h2><p>@Model.Integrations.Count configured workflows</p></div></div><div class="table-wrap"><table><thead><tr><th>Integration</th><th>System</th><th>Cadence</th><th>Last run</th><th>Records</th><th>Result</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>@foreach(var integration in Model.Integrations){<tr id="integration-@integration.Id"><td><strong>@integration.Name</strong><small>@integration.Owner</small></td><td>@integration.System</td><td>@integration.Cadence</td><td data-last-run>@integration.LastRun</td><td>@integration.Records</td><td><span data-result class="status status-@integration.Result">@integration.Result</span></td><td><button class="button button-small integration-check" type="button" data-id="@integration.Id">Run check</button></td></tr>}</tbody></table></div></section></div>
+}
+else if (Model.ActivePage == "incidents")
+{
+    <div class="page-stack"><header class="page-intro"><div><h2>Incident management</h2><p>Find, assess, acknowledge, and escalate operational incidents against service targets.</p></div></header>@await Html.PartialAsync("_IncidentTable", new IncidentTableViewModel { Incidents = Model.Incidents, Embedded = false })</div>
+}
+else if (Model.ActivePage == "support")
+{
+    <div class="page-stack"><header class="page-intro"><div><h2>L1–L3 support queue</h2><p>Track customer requests across Service Desk, business/IT, and engineering escalation.</p></div><button class="button button-primary" type="button" data-open-dialog="ticket-dialog">Create support ticket</button></header><section class="data-boundary" role="note">Ticket changes are stored in this running dashboard instance until a protected support API is connected.</section><section class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Ticket</th><th>Subject</th><th>Customer</th><th>Level</th><th>Age</th><th>Owner</th><th>Status</th></tr></thead><tbody id="support-rows">@foreach(var ticket in Model.Tickets){<tr><td><strong>@ticket.Id</strong></td><td>@ticket.Subject</td><td>@ticket.Customer</td><td><span class="tier-label">@ticket.Level</span></td><td>@ticket.Age</td><td>@ticket.Owner</td><td><span class="status status-@ticket.Status">@ticket.Status</span></td></tr>}</tbody></table></div></section></div>
+}
+else if (Model.ActivePage == "reports")
+{
+    <div class="page-stack"><header class="page-intro"><div><h2>Operational reporting</h2><p>Weekly performance, integration, support SLA, and compliance summaries.</p></div><a class="button button-primary" href="/reports/weekly.csv">Download current CSV</a></header><section class="data-boundary" role="note">Current figures come from the representative operations dataset and require validation before external distribution.</section><section class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Report</th><th>Period</th><th>Generated</th><th>Owner</th><th>Status</th><th><span class="sr-only">Download</span></th></tr></thead><tbody>@foreach(var report in Model.Reports){<tr><td><strong>@report.Name</strong><small>@report.Id</small></td><td>@report.Period</td><td>@report.Generated</td><td>@report.Owner</td><td><span class="status status-@report.Status">@report.Status</span></td><td>@if(report.Status == "ready"){<a class="button button-small" href="/reports/weekly.txt">Download</a>}</td></tr>}</tbody></table></div></section></div>
+}
+else if (Model.ActivePage == "compliance")
+{
+    <div class="page-stack"><header class="page-intro"><div><h2>Compliance evidence readiness</h2><p>Operational evidence status mapped to the supplied project and security commitments.</p></div></header><section class="warning-note" role="note"><strong>Evidence readiness—not certification.</strong> Final compliance claims require client security, legal, infrastructure, and auditor approval.</section><section class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Control</th><th>Framework / commitment</th><th>Owner</th><th>Status</th><th>Reviewed</th></tr></thead><tbody>@foreach(var control in Model.Compliance){<tr><td><strong>@control.Control</strong></td><td>@control.Framework</td><td>@control.Owner</td><td><span class="status status-@control.Status">@control.Status</span></td><td>@control.Reviewed</td></tr>}</tbody></table></div></section></div>
+}
+else if (Model.ActivePage == "settings")
+{
+    <div class="page-stack"><header class="page-intro"><div><h2>Operations settings</h2><p>Local display and notification preferences for this browser session.</p></div></header><div class="settings-grid"><section class="panel"><h3>Display density</h3><p>Choose the row spacing used across operational tables.</p><label class="field"><span>Density</span><select id="density-setting"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></section><section class="panel"><h3>Notification preferences</h3><form id="preferences-form"><label class="check-row"><input type="checkbox" name="critical" checked><span><strong>Critical incident notifications</strong><small>Immediate notice for unavailable services.</small></span></label><label class="check-row"><input type="checkbox" name="weekly" checked><span><strong>Weekly performance report</strong><small>Availability, integrations, incidents, and SLA.</small></span></label><label class="check-row"><input type="checkbox" name="support"><span><strong>Support queue digest</strong><small>Daily aging and escalation summary.</small></span></label><button class="button button-primary" type="submit">Save preferences</button></form></section><section class="panel span-two"><h3>Production adapter readiness</h3><dl class="readiness"><div><dt>Commercial API</dt><dd><span class="status status-success">Configured</span></dd></div><div><dt>Monitoring adapters</dt><dd><span class="status status-warning">Pending</span></dd></div><div><dt>SSO / RBAC / MFA</dt><dd><span class="status status-warning">Required</span></dd></div><div><dt>Audit persistence</dt><dd><span class="status status-warning">Required</span></dd></div></dl><p class="muted">Configure secrets server-side. Never expose service credentials in browser-delivered settings.</p></section></div></div>
+}
+else if (Model.ActivePage == "activity")
+{
+    <div class="page-stack"><header class="page-intro"><div><h2>Operations activity</h2><p>Recent service, incident, support, report, and security events.</p></div></header><section class="panel activity-page">@foreach(var item in Model.Activities){<article class="activity-item"><i class="activity-dot @item.Tone"></i><time>@item.Time AST</time><div><strong>@item.Title</strong><span>@item.Detail</span></div></article>}</section></div>
+}
+else
+{
+    <section class="state-page"><span aria-hidden="true">@(Model.ActivePage == "forbidden" ? "403" : Model.ActivePage == "error" ? "500" : "404")</span><h2>@(Model.ActivePage == "forbidden" ? "You do not have access to this area" : Model.ActivePage == "error" ? "The dashboard could not complete that request" : "That dashboard page does not exist")</h2><p>@(Model.ActivePage == "forbidden" ? "Ask an Evostel administrator to review your managed-services role." : "Return to the overview and continue monitoring available services.")</p><a class="button button-primary" href="/">Return to overview</a></section>
+}
+
+<dialog class="modal" id="service-dialog"><div class="modal-head"><h2 id="service-dialog-title">Service details</h2><button type="button" data-close-dialog aria-label="Close service details">×</button></div><div class="modal-body" id="service-dialog-body"></div><div class="modal-actions"><button class="button button-primary" type="button" data-close-dialog>Close details</button></div></dialog>
+<dialog class="modal" id="incident-dialog"><div class="modal-head"><h2 id="incident-dialog-title">Incident details</h2><button type="button" data-close-dialog aria-label="Close incident details">×</button></div><div class="modal-body" id="incident-dialog-body"></div><div class="modal-actions"><button class="button button-outline acknowledge-incident" type="button">Acknowledge incident</button><button class="button button-primary" type="button" data-close-dialog>Close</button></div></dialog>
+<dialog class="modal" id="ticket-dialog"><form id="ticket-form" novalidate><div class="modal-head"><div><h2>Create support ticket</h2><p>Route a customer issue to the correct support tier.</p></div><button type="button" data-close-dialog aria-label="Close create-ticket form">×</button></div><div class="modal-body form-grid"><label class="field"><span>Subject</span><input name="subject" maxlength="120" required><small class="field-error"></small></label><label class="field"><span>Customer</span><input name="customer" maxlength="100" required><small class="field-error"></small></label><label class="field"><span>Support level</span><select name="level"><option>L1</option><option>L2</option><option>L3</option></select></label><label class="field full"><span>Description</span><textarea name="description" rows="4" maxlength="1000" required></textarea><small class="field-error"></small></label></div><div class="modal-actions"><button class="button button-outline" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Create ticket</button></div></form></dialog>
