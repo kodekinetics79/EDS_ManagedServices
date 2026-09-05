@@ -129,6 +129,23 @@ Do not store credentials in `appsettings.json`. Use Azure Key Vault, environment
 - Operations activity and local preferences
 - Responsive navigation, accessible dialogs, 403, 404, and 500 states
 
+## Live service health
+
+`ServiceHealthMonitor` probes the endpoints listed under `Evostel:ServiceProbes` once a
+minute and caches the result, so the service rail reports measured status and latency
+without putting an outbound call on the render path of every page. Probes run
+sequentially: six concurrent requests to shared hosting inflate every measurement and
+report healthy services as degraded.
+
+Any HTTP response counts as reachable, including the 401s returned by the endpoints that
+need a customer token. Only transport failures, timeouts, and 5xx mark a service
+unavailable. A service whose probe has not yet reported keeps its representative values,
+and the `Source` column says which of the two is on screen — `Live probe` or the
+configured label.
+
+Availability percentages remain representative; measuring those needs history the
+dashboard does not keep.
+
 ## Data and security boundary
 
 Only the Commercial API health probe is live. Incidents, SLA figures, integration records, support tickets, activity, reports, and compliance records use representative in-memory data until Evostel supplies authenticated administrative and monitoring endpoints.

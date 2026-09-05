@@ -4,7 +4,7 @@ namespace Evostel.ManagedServices.Web.Services;
 
 // Representative data source. Serves the built-in dataset so the dashboard is fully
 // operable before the Evostel operations API exists.
-public sealed class ManagedServicesStore : IManagedServicesData
+public sealed class ManagedServicesStore(IServiceHealthReadings healthReadings) : IManagedServicesData
 {
     private readonly object _gate = new();
     private int _nextTicket = 3322;
@@ -83,7 +83,7 @@ public sealed class ManagedServicesStore : IManagedServicesData
             return Task.FromResult<DashboardViewModel>(new()
             {
                 ActivePage = activePage,
-                Services = _services.Select(Clone).ToList(),
+                Services = _services.Select(WithLiveHealth).ToList(),
                 Incidents = _incidents.Select(Clone).ToList(),
                 Tickets = _tickets.Select(Clone).ToList(),
                 Integrations = _integrations.Select(Clone).ToList(),
@@ -136,6 +136,24 @@ public sealed class ManagedServicesStore : IManagedServicesData
             integration.LastRun = $"{DateTime.Now:HH:mm} AST";
             return Task.FromResult<IntegrationRun?>(Clone(integration));
         }
+    }
+
+    // Measured status and latency replace the representative values once a probe has
+    // reported. Source flips with them so the service dialog says which one is on screen.
+    private ServiceStatus WithLiveHealth(ServiceStatus row)
+    {
+        var clone = Clone(row);
+        var reading = healthReadings.Find(row.Id);
+        if (reading is null) return clone;
+
+        clone.Status = reading.Status;
+        clone.Latency = reading.LatencyMs ?? clone.Latency;
+        return new()
+        {
+            Id = clone.Id, Name = clone.Name, Status = clone.Status, Latency = clone.Latency,
+            Availability = clone.Availability, Owner = clone.Owner, Source = "Live probe",
+            Detail = clone.Detail
+        };
     }
 
     private static ServiceStatus Clone(ServiceStatus row) => new() { Id = row.Id, Name = row.Name, Status = row.Status, Latency = row.Latency, Availability = row.Availability, Owner = row.Owner, Source = row.Source, Detail = row.Detail };

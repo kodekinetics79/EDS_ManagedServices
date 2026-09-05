@@ -28,6 +28,15 @@ if (!string.Equals(operationsMode, "Representative", StringComparison.OrdinalIgn
         "or set the mode back to 'Representative'.");
 }
 
+builder.Services.AddHttpClient("service-probe", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+builder.Services.AddSingleton<ServiceHealthMonitor>();
+builder.Services.AddSingleton<IServiceHealthReadings>(sp => sp.GetRequiredService<ServiceHealthMonitor>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ServiceHealthMonitor>());
+
 builder.Services.AddSingleton<ManagedServicesStore>();
 builder.Services.AddSingleton<IManagedServicesData>(sp => sp.GetRequiredService<ManagedServicesStore>());
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
