@@ -51,6 +51,20 @@ docker run --rm -p 8080:8080 evostel-managed-services
 
 Open `http://localhost:8080`.
 
+## Render
+
+`render.yaml` is a Blueprint that builds the repository `Dockerfile` and runs one
+always-on instance in Frankfurt, so the in-memory store and the Data Protection key
+ring survive between requests.
+
+1. Render dashboard, **New > Blueprint**, connect `kodekinetics79/EDS_ManagedServices`.
+2. Render reads `render.yaml` and creates the service. Apply.
+
+The app binds to `$PORT` when Render sets it and falls back to 8080 otherwise, so the
+same image runs unchanged locally, on Render, and on any other container host.
+`/healthz` is the health check and answers without calling the Commercial API, so an
+upstream outage shows as a degraded badge in the UI rather than restarting the service.
+
 ## Fly.io (recommended host)
 
 `fly.toml` runs the repository `Dockerfile` as a single always-on instance in `fra`,

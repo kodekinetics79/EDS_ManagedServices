@@ -1,0 +1,15 @@
+# Render Blueprint. Build from the repository Dockerfile and keep one always-on
+# instance, so the in-memory store and the Data Protection key ring survive
+# between requests. The app binds to $PORT, which Render sets.
+services:
+  - type: web
+    name: eds-managed-services
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: frankfurt
+    plan: starter
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production

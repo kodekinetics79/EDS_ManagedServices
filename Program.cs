@@ -3,6 +3,12 @@ using Evostel.ManagedServices.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://+:{port}");
+}
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
 builder.Services.AddHttpClient<CommercialApiProbeService>(client =>
@@ -33,6 +39,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
 
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 app.MapControllerRoute(
     name: "default",
